@@ -7,7 +7,7 @@ from operators.stage_redshift import StageToRedshiftOperator
 from operators.load_fact import LoadFactOperator
 from operators.load_dimension import LoadDimensionOperator
 from operators.data_quality import DataQualityOperator
-from helpers.sql_queries import SqlQueries
+from helpers import SqlQueries
 from airflow.operators.postgres_operator import PostgresOperator
 
 default_args = {
@@ -62,7 +62,8 @@ def final_project():
         task_id='Load_songplays_fact_table',
         redshift_conn_id="redshift",
         params={
-            'table': "factSongPlays"
+            'table': "factSongPlays",
+            'TRUNCATE': False
         },
         sql_create=SqlQueries.songplay_table_create,
         sql_insert=SqlQueries.songplay_table_insert
@@ -72,7 +73,8 @@ def final_project():
         task_id='Load_user_dim_table',
         redshift_conn_id="redshift",
         params={
-            'table': "dimUsers"
+            'table': "dimUsers",
+            'TRUNCATE': False
         },
         sql_delete=SqlQueries.user_table_delete,
         sql_create=SqlQueries.user_table_create,
@@ -83,7 +85,8 @@ def final_project():
         task_id='Load_song_dim_table',
         redshift_conn_id="redshift",
         params={
-            'table': "dimSongs"
+            'table': "dimSongs",
+            'TRUNCATE': True
         },
         sql_delete=SqlQueries.song_table_delete,
         sql_create=SqlQueries.song_table_create,
@@ -94,7 +97,8 @@ def final_project():
         task_id='Load_artist_dim_table',
         redshift_conn_id="redshift",
         params={
-            'table': "dimArtists"
+            'table': "dimArtists",
+            'TRUNCATE': False
         },
         sql_delete=SqlQueries.artist_table_delete,
         sql_create=SqlQueries.artist_table_create,
@@ -105,7 +109,8 @@ def final_project():
         task_id='Load_time_dim_table',
         redshift_conn_id="redshift",
         params={
-            'table': "dimTime"
+            'table': "dimTime",
+            'TRUNCATE': True
         },
         sql_delete=SqlQueries.time_table_delete,
         sql_create=SqlQueries.time_table_create,
@@ -117,7 +122,16 @@ def final_project():
         redshift_conn_id="redshift",
         params={
             'tables': ["log_data", "song_data",  "factSongPlays", 
-                        "dimArtists", "dimTime", "dimUsers", "dimSongs"]
+                        "dimArtists", "dimTime", "dimUsers", "dimSongs"],
+            'checks': [
+                    {'test_sql': "SELECT COUNT(*) FROM {}", 
+                     'expected_result': 1, 
+                     'comparison': 'records, records[0] > 1', 
+                     'explain_fail': 'Table {} returned no results'},
+                    {'test_sql': "SELECT COUNT(*) FROM {}", 
+                    'expected_result': 0, 
+                    'comparison': 'records[0][0] > 0', 
+                    'explain_fail': 'Table {} is empty'}]
             
         }
 
